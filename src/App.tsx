@@ -1,15 +1,9 @@
 import './assets/styles/custom.scss';
 import './App.css';
-import Topbar from 'components/Topbar';
-import Search from 'pages/Search';
+import Routes from 'Routes';
 
 function App() {
-  return (
-    <>
-      <Topbar />
-      <Search />
-    </>
-  );
+  return <Routes />;
 }
 
 export default App;

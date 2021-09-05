@@ -1,9 +1,12 @@
 import './styles.css';
+import { Link } from 'react-router-dom';
 
 const Topbar = () => {
   return (
     <div className="bg-primary top-bar">
-      <h1 className="container">GitHub API</h1>
+      <Link to="/" className="container">
+        <h1>GitHub API</h1>
+      </Link>
     </div>
   );
 };
