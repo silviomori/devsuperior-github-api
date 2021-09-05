@@ -1,13 +1,13 @@
 import './assets/styles/custom.scss';
 import './App.css';
-import Home from 'pages/Home';
 import Topbar from 'components/Topbar';
+import Search from 'pages/Search';
 
 function App() {
   return (
     <>
       <Topbar />
-      <Home />
+      <Search />
     </>
   );
 }

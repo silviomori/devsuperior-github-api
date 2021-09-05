@@ -1,0 +1,14 @@
+.search-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  height: calc(100vh - 62px);
+}
+
+.search-card-container {
+  height: calc((100vh - 62px) * 0.3);
+}
+
+.profile-card-container {
+  height: calc((100vh - 62px) * 0.6);
+}
