@@ -1,9 +1,14 @@
 import './assets/styles/custom.scss';
 import './App.css';
+import Home from 'pages/Home';
+import Topbar from 'components/Topbar';
 
 function App() {
   return (
-    <h1>GitHub API Integration</h1>
+    <>
+      <Topbar />
+      <Home />
+    </>
   );
 }
 
