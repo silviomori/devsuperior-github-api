@@ -1,16 +1,21 @@
 import './styles.css';
-import SearchCard from './SearchCard';
 import UserProfile from './UserProfile';
+import { useState } from 'react';
+import { Profile } from 'types/profile';
+import SearchCard from './SearchCard';
 
 const Search = () => {
+  const [profile, setProfile] = useState<Profile>();
   return (
     <div className="container search-container">
       <div className="search-card-container">
-        <SearchCard />
+        <SearchCard setProfile={setProfile} />
       </div>
-      <div className="profile-card-container">
-        <UserProfile />
-      </div>
+      {profile && (
+        <div className="profile-card-container">
+          <UserProfile profile={profile} />
+        </div>
+      )}
     </div>
   );
 };
