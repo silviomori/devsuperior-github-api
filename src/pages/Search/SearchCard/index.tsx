@@ -4,18 +4,24 @@ import './styles.css';
 
 type Props = {
   setProfile: Function;
+  setLoading: Function;
 };
 
-const SearchCard = ({ setProfile }: Props) => {
+const SearchCard = ({ setProfile, setLoading }: Props) => {
   const [username, setUsername] = useState('');
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setUsername(event.target.value);
   };
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    axios.get(`https://api.github.com/users/${username}`).then((result) => {
-      setProfile(result.data);
-    });
+    setLoading(true);
+    axios
+      .get(`https://api.github.com/users/${username}`)
+      .then((result) => {
+        setProfile(result.data);
+      })
+      .catch(() => setProfile(null))
+      .finally(() => setLoading(false));
   };
 
   return (
