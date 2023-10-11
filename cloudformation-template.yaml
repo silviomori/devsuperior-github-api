@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  Creates the infrastructure to host and expose a Single Page Application:
+      - An Amazon S3 bucket for hosting the application
+      - An Amazon CloudFront distribution to expose the application
+      - An Amazon S3 bucket for hosting bucket and cloudfront access logs
+
+Parameters:
+  AppName:
+    Type: String
+    Default: 'devsuperior-github-api'
+
+Resources:
+
+  # The Amazon S3 bucket into which access logs from S3 (for the application) and CloudFront will be put
+  LoggingBucket:
+    #checkov:skip=CKV_AWS_18: "This bucket is private and only for storing logs"
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub '${AppName}-logs'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: 'AES256'
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+    DeletionPolicy: Delete
+
+  # The Amazon S3 bucket into which our Single Page Application build files must be deployed
+  DeploymentBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref AppName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls : true
+        BlockPublicPolicy : true
+        IgnorePublicAcls : true
+        RestrictPublicBuckets : true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+        LogFilePrefix: 's3-access-logs'
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: 'AES256'
+
+  # The Amazon S3 bucket policy for securing the bucket hosting the application
+  BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      PolicyDocument:
+        Id: !Sub '${AppName}-Policy'
+        Version: 2012-10-17
+        Statement:
+          - Sid: !Sub '${AppName}-PolicyForCloudFrontPrivateContent'
+            Effect: Allow
+            Resource: !Sub ${DeploymentBucket.Arn}/*
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CFDistribution}
+            Action: 's3:GetObject*'
+      Bucket: !Ref DeploymentBucket
+
+  # The Amazon CloudFront distribution exposing our Single Page Application
+  CFDistribution:
+    #checkov:skip=CKV_AWS_68: "For demo purposes and to reduce cost, no WAF is configured"
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        # PriceClass: PriceClass_All # Use all edge locations (best performance)
+        PriceClass: PriceClass_100 # Use only North America and Europe
+        Origins:
+        - DomainName: !GetAtt DeploymentBucket.RegionalDomainName
+          Id: !Sub '${AppName}-S3Origin'
+          S3OriginConfig:
+            OriginAccessIdentity: ""
+          OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+        Enabled: true
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          AllowedMethods:
+          - GET
+          - HEAD
+          - OPTIONS
+          TargetOriginId: !Sub '${AppName}-S3Origin'
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # SecurityHeadersPolicy
+          ViewerProtocolPolicy: redirect-to-https
+        Logging:
+          Bucket: !GetAtt LoggingBucket.RegionalDomainName
+          Prefix: 'cloudfront-access-logs'
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          MinimumProtocolVersion: 'TLSv1.2_2021'
+
+  # The Amazon CloudFront origin access control
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    DependsOn:
+      - DeploymentBucket
+    Properties: 
+      OriginAccessControlConfig:
+        Description: Default Origin Access Control
+        Name: !Ref AWS::StackName
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+Outputs:
+  DeploymentBucket:
+    Value: !Ref DeploymentBucket
+  CFDistributionURL:
+    Value: !GetAtt CFDistribution.DomainName
